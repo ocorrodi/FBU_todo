@@ -6,11 +6,20 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.ClipData;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
+import org.apache.commons.io.FileUtils;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.*;
+import java.io.File;
+import android.util.Log;
+
 
 
 public class MainActivity extends AppCompatActivity {
@@ -20,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     Button btnadd;
     EditText eti;
     RecyclerView rvitems;
+    ItemsAdapter itemsAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,15 +40,59 @@ public class MainActivity extends AppCompatActivity {
         eti = findViewById(R.id.eti);
         rvitems = findViewById(R.id.rvitems);
 
-        eti.setText("this is from java");
-        items = new ArrayList<>();
-        items.add("buy milk");
-        items.add("go to gym");
-        items.add("have fun");
+        //eti.setText("this is from java");
+        loadItems();
 
-       ItemsAdapter itemsAdapter = new ItemsAdapter(items);
+        ItemsAdapter.OnLongClickListener listener = new ItemsAdapter.OnLongClickListener() {
+            @Override
+            public void onItemLongClicked(int position) {
+                items.remove(position);
+                itemsAdapter.notifyItemRemoved(position);
+                Toast.makeText(getApplicationContext(), "item was removed", Toast.LENGTH_SHORT).show();
+                saveItems();
+            }
+        };
+        itemsAdapter = new ItemsAdapter(items, listener);
 
         rvitems.setAdapter(itemsAdapter);
         rvitems.setLayoutManager(new LinearLayoutManager(this));
+
+        btnadd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String item = eti.getText().toString();
+                //add item to model
+                items.add(item);
+                //notify adapter
+                itemsAdapter.notifyItemInserted(items.size() - 1);
+                eti.setText("");
+                Toast.makeText(getApplicationContext(), "item was added", Toast.LENGTH_SHORT).show();
+                saveItems();
+            }
+        });
+    }
+
+    private File getDataFile() {
+        return new File(getFilesDir(), "data.txt");
+    }
+
+    //read file
+    private void loadItems() {
+        try {
+            items = new ArrayList<>(FileUtils.readLines(getDataFile(), Charset.defaultCharset()));
+        }
+        catch (IOException e) {
+            Log.e("MainActivity", "Error reading items", e);
+            items = new ArrayList<>();
+        }
+    }
+
+    //write file
+    private void saveItems() {
+        try {
+            FileUtils.writeLines(getDataFile(), items);
+        } catch (IOException e) {
+            Log.e("MainActivity", "Error writing items", e);
+        }
     }
 }
